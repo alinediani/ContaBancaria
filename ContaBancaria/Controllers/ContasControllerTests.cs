@@ -20,7 +20,6 @@ namespace ContaBancaria.Controllers
 
             _context = new AppDbContext(options);
 
-            // Adiciona alguns dados de seed
             _context.Contas.AddRange(new List<Conta>
             {
                 new Conta { Titular = "Titular1", Saldo = 100 },
