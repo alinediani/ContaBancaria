@@ -1,68 +1,62 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
+using ContaBancaria.Controllers;
 using ContaBancaria.Models;
+using ContaBancaria.Service;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using Moq;
 using Xunit;
-namespace ContaBancaria.Controllers
+
+namespace ContaBancaria.Tests.Controllers
 {
     public class ContasControllerTests
     {
-        private readonly AppDbContext _context;
+        private readonly Mock<IContaService> _contaServiceMock;
+        private readonly ContasController _contasController;
 
         public ContasControllerTests()
         {
-            var options = new DbContextOptionsBuilder<AppDbContext>()
-                .UseInMemoryDatabase(databaseName: "TestDatabase")
-                .Options;
-
-            _context = new AppDbContext(options);
-
-            _context.Contas.AddRange(new List<Conta>
-            {
-                new Conta { Titular = "Titular1", Saldo = 100 },
-                new Conta { Titular = "Titular2", Saldo = 200 }
-            });
-
-            _context.SaveChanges();
+            _contaServiceMock = new Mock<IContaService>();
+            _contasController = new ContasController(_contaServiceMock.Object);
         }
 
         [Fact]
         public void Deposito_Deve_Retornar_Ok_Result()
         {
             // Arrange
-            var controller = new ContasController(_context);
+            _contaServiceMock.Setup(x => x.Deposito(It.IsAny<int>(), It.IsAny<decimal>()));
 
             // Act
-            var result = controller.Deposito(1, 100);
+            var result = _contasController.Deposito(1, 100);
 
             // Assert
             Assert.IsType<OkObjectResult>(result);
+            _contaServiceMock.Verify(x => x.Deposito(1, 100), Times.Once);
         }
 
         [Fact]
         public void Saque_Com_Saldo_Suficiente_Deve_Retornar_Ok_Result()
         {
             // Arrange
-            var controller = new ContasController(_context);
+            _contaServiceMock.Setup(x => x.Saque(It.IsAny<int>(), It.IsAny<decimal>()));
 
             // Act
-            var result = controller.Saque(1, 50);
+            var result = _contasController.Saque(1, 50);
 
             // Assert
             Assert.IsType<OkObjectResult>(result);
+            _contaServiceMock.Verify(x => x.Saque(1, 50), Times.Once);
         }
 
         [Fact]
         public void Saque_Com_Saldo_Insuficiente_Deve_Retornar_BadRequest_Result()
         {
             // Arrange
-            var controller = new ContasController(_context);
+            _contaServiceMock.Setup(x => x.Saque(It.IsAny<int>(), It.IsAny<decimal>()))
+                .Throws(new InvalidOperationException("Saldo insuficiente para realizar o saque."));
 
             // Act
-            var result = controller.Saque(1, 5000);
+            var result = _contasController.Saque(1, 5000);
 
             // Assert
             Assert.IsType<BadRequestObjectResult>(result);
@@ -72,23 +66,25 @@ namespace ContaBancaria.Controllers
         public void Transferencia_Com_Saldo_Suficiente_Deve_Retornar_Ok_Result()
         {
             // Arrange
-            var controller = new ContasController(_context);
+            _contaServiceMock.Setup(x => x.Transferencia(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<decimal>()));
 
             // Act
-            var result = controller.Transferencia(1, 2, 30);
+            var result = _contasController.Transferencia(1, 2, 30);
 
             // Assert
             Assert.IsType<OkObjectResult>(result);
+            _contaServiceMock.Verify(x => x.Transferencia(1, 2, 30), Times.Once);
         }
 
         [Fact]
         public void Transferencia_Com_Saldo_Insuficiente_Deve_Retornar_BadRequest_Result()
         {
             // Arrange
-            var controller = new ContasController(_context);
+            _contaServiceMock.Setup(x => x.Transferencia(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<decimal>()))
+                .Throws(new InvalidOperationException("Saldo insuficiente para realizar a transferência."));
 
             // Act
-            var result = controller.Transferencia(1, 2, 1500);
+            var result = _contasController.Transferencia(1, 2, 1500);
 
             // Assert
             Assert.IsType<BadRequestObjectResult>(result);
@@ -98,13 +94,15 @@ namespace ContaBancaria.Controllers
         public void Extrato_Deve_Retornar_Ok_Result()
         {
             // Arrange
-            var controller = new ContasController(_context);
+            _contaServiceMock.Setup(x => x.Extrato(It.IsAny<int>()))
+                .Returns(new List<Lancamento>());
 
             // Act
-            var result = controller.Extrato(1);
+            var result = _contasController.Extrato(1);
 
             // Assert
             Assert.IsType<OkObjectResult>(result);
+            _contaServiceMock.Verify(x => x.Extrato(1), Times.Once);
         }
     }
 }
